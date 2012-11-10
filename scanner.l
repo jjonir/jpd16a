@@ -1,12 +1,22 @@
 %{
 #include <stdlib.h>
 #include <stdio.h>
+#include "parser.tab.h"
+
+#ifndef SCANNER_ONLY
+	#define printf(...)
+#else
+	#define printf(...) printf(__VA_ARGS__)
+#endif
 %}
 
 op (set)|(add)|(sub)|(mul)|(mli)|(div)|(dvi)|(mod)|(mdi)|(and)|(bor)|(xor)|(shr)|(asr)|(shl)|(ifb)|(ifc)|(ife)|(ifn)|(ifg)|(ifa)|(ifl)|(ifu)|(adx)|(sbx)|(sti)|(std)
 spc_op (jsr)|(int)|(iag)|(ias)|(rfi)|(iaq)|(hwn)|(hwq)|(hwi)
 dat (dat)
-reg (a)|(b)|(c)|(x)|(y)|(z)|(i)|(j)|(pc)|(sp)|(ex)|(ia)
+gpr (a)|(b)|(c)|(x)|(y)|(z)|(i)|(j)
+pc (pc)
+sp (sp)
+ex (ex)
 push (push)
 pop (pop)
 peek (peek)
@@ -22,78 +32,92 @@ str \".*\"
 
 {op} {
 	printf("op: %s\n", yytext);
+	return OP;
 }
 
 {spc_op} {
 	printf("special op: %s\n", yytext);
+	return SPC_OP;
 }
 
 {dat} {
 	printf("dat\n");
+	return DAT;
 }
 
-{reg} {
-	printf("register: %s\n", yytext);
+{gpr} {
+	printf("gpr: %s\n", yytext);
+	return GPR;
+}
+
+{pc} {
+	printf("pc\n");
+	return PC;
+}
+
+{sp} {
+	printf("sp\n");
+	return SP;
+}
+
+{ex} {
+	printf("ex\n");
+	return EX;
 }
 
 {push} {
 	printf("push\n");
+	return PUSH;
 }
 
 {pop} {
 	printf("pop\n");
+	return POP;
 }
 
 {peek} {
 	printf("peek\n");
+	return PEEK;
 }
 
 {pick} {
 	printf("pick\n");
+	return PICK;
 }
 
 {int} {
 	printf("int: %li\n", strtol(yytext, NULL, 10));
+	return INT;
 }
 
 {octal_int} {
 	printf("octal int: %lo\n", strtoul(yytext, NULL, 010));
+	return INT;
 }
 
 {hex_int} {
 	printf("hex int: %lx\n", strtoul(yytext, NULL, 0x10));
+	return INT;
 }
 
 {char} {
 	printf("character constant: %c\n", yytext[1]);
+	return CHAR;
 }
 
 {str} {
 	printf("string constant: %s\n", yytext);
+	return STR;
 }
 
 {label} {
 	printf("label reference %s\n", yytext);
+	return LABEL;
 }
 
-, {
-	printf("comma\n");
-}
-
-"[" {
-	printf("open bracket\n");
-}
-
-"]" {
-	printf("close bracket\n");
-}
-
-"+"|"-" {
-	printf("plusorminus %s\n", yytext);
-}
-
-:{label} {
-	printf("label: %s\n", yytext+1);
+","|"["|"]"|"+"|"-"|":" {
+	printf("pass-through character: %c\n", yytext[0]);
+	return yytext[0];
 }
 
 [ \t\n]+ /* Eat whitespace */
@@ -110,8 +134,13 @@ int main(int argc, char *argv[])
 	else
 		yyin = stdin;
 
-	yylex();
+	while(yylex());
 
 	return 0;
+}
+#else
+int yywrap(void)
+{
+	return 1;
 }
 #endif
