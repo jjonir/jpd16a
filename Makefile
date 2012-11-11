@@ -7,7 +7,7 @@ YFLAGS = -d -t
 
 .PHONY: all clean
 
-all: scanner parser
+all: scanner parser memdump
 
 parser: parser.o scanner.o
 	$(CC) -o $@ parser.o scanner.o
@@ -36,5 +36,8 @@ scanner_only.c: scanner.l
 	$(LEX) -DSCANNER_ONLY $<
 	mv lex.yy.c scanner_only.c
 
+memdump: memdump.c
+	$(CC) $(CFLAGS) -o $@ $<
+
 clean:
-	$(RM) parser.tab.c parser.tab.h parser.o scanner.c scanner.o parser scanner_only.c scanner_only.o scanner
+	$(RM) parser.tab.c parser.tab.h parser.o scanner.c scanner.o parser scanner_only.c scanner_only.o scanner memdump
