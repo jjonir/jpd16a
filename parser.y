@@ -87,7 +87,7 @@ rval:	val { $$ = $1; }
 	| POP { $$ = 0x18; }
 	| '[' SP '+' '+' ']' { $$ = 0x18; }
 	| lblref { $$ = 0x1f;}
-	| lit { if ((literal >= -1) && (literal <= 30)) $$ = literal + 0x21; else $$ = 0x1f; }
+	| lit { if ((literal >= -1) && (literal <= 30)) $$ = literal + 0x21; else {$$ = 0x1f; save_literal(literal); } }
 	;
 
 val:	GPR { $$ = gpr_no; }
