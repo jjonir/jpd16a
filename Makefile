@@ -40,7 +40,7 @@ memdump: memdump.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 disasm: disasm.c
-	$(CC) $(CFLAGS) -o $@ $<
+	$(CC) $(CFLAGS) -DSTANDALONE -o $@ $<
 
 clean:
 	$(RM) parser.tab.c parser.tab.h parser.o scanner.c scanner.o parser scanner_only.c scanner_only.o scanner memdump disasm

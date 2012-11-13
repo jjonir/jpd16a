@@ -4,8 +4,6 @@
 #include <string.h>
 
 char lval[16], rval[16];
-FILE *f;
-int i;
 
 const char *opcode_table[0x20] = {
 	"",
@@ -33,23 +31,23 @@ const char *gpr_table[0x08] = {
 	"a", "b", "c", "x", "y", "z", "i", "j"
 };
 
-void read_word(uint16_t *word)
-{
-	fread(word, 2, 1, f);
-	i++;
-}
+#ifdef STANDALONE
+static int decode_inst(uint16_t *inst, char *buf);
+#endif
+static int decode_lval(uint16_t val, uint16_t next);
+static int decode_rval(uint16_t val, uint16_t next);
 
-void decode_lval(uint16_t val)
+int decode_lval(uint16_t val, uint16_t next)
 {
-	uint16_t word;
+	int rv = 0;
 
 	if (val < 0x08) {
 		sprintf(lval, "%s", gpr_table[val]);
 	} else if (val < 0x10) {
 		sprintf(lval, "[%s]", gpr_table[val - 0x08]);
 	} else if (val < 0x18) {
-		read_word(&word);
-		sprintf(lval, "[%x+%s]", word, gpr_table[val - 0x10]);
+		rv = 1;
+		sprintf(lval, "[0x%.4x+%s]", next, gpr_table[val - 0x10]);
 	} else {
 		switch (val) {
 		case 0x18:
@@ -59,8 +57,8 @@ void decode_lval(uint16_t val)
 			sprintf(lval, "peek");
 			break;
 		case 0x1a:
-			read_word(&word);
-			sprintf(lval, "[sp+%x]", word);
+			rv = 1;
+			sprintf(lval, "[sp+0x%.4x]", next);
 			break;
 		case 0x1b:
 			sprintf(lval, "sp");
@@ -72,76 +70,102 @@ void decode_lval(uint16_t val)
 			sprintf(lval, "ex");
 			break;
 		case 0x1e:
-			read_word(&word);
-			sprintf(lval, "[%x]", word);
+			rv = 1;
+			sprintf(lval, "[0x%.4x]", next);
 			break;
 		case 0x1f:
-			read_word(&word);
-			sprintf(lval, "%x", word);
+			rv = 1;
+			sprintf(lval, "0x%.4x", next);
 			break;
 		default:
 			break;
 		}
 	}
+
+	return rv;
 }
 
-void decode_rval(uint16_t val)
+int decode_rval(uint16_t val, uint16_t next)
 {
+	int rv = 0;
 	char temp[16];
+
 	if (val >= 0x20) {
-		sprintf(rval, "%x", (int16_t)val - 0x21);
+		sprintf(rval, "0x%.4x", (int16_t)val - 0x21);
 	} else if (val == 0x18) {
 		sprintf(rval, "pop");
 	} else {
 		strncpy(temp, lval, 16);
-		decode_lval(val);
+		rv = decode_lval(val, next);
 		strncpy(rval, lval, 16);
 		strncpy(lval, temp, 16);
 	}
+
+	return rv;
 }
 
-int main(int argc, char *argv[])
+int decode_inst(uint16_t *inst, char *buf)
 {
-	const char *fname;
-	int bytes;
+	int words = 1;
 	uint16_t word;
 
-	if (argc > 1)
-		fname = argv[1];
+	word = inst[0];
+	if (word & 0x1F) {
+		words += decode_rval((word >> 10) & 0x3F, inst[words]);
+		words += decode_lval((word >> 5) & 0x1F, inst[words]);
+		sprintf(buf, "%s %s, %s", opcode_table[word & 0x1F], lval, rval);
+	} else if ((word >> 5) & 0x1F) {
+		words += decode_rval((word >> 10) & 0x3F, inst[words]);
+		sprintf(buf, "%s %s", spc_opcode_table[(word >> 5) & 0x1F], rval);
+	} else {
+		sprintf(buf, "dat 0x%.4x", word);
+	}
+
+	return words;
+}
+
+#ifdef STANDALONE
+int main(int argc, char *argv[])
+{
+	FILE *f;
+	const char *fname = NULL;
+	int i, len, inst_len;
+	uint16_t memory[0x10000];
+	uint16_t start = 0, end = 0xFFFF, last;
+	char buf[32];
+
+	for (i = 1; i < argc; i++) {
+		if (strncmp(argv[i], "--start=", 8) == 0)
+			start = atoi(argv[i] + 8);
+		else if (strncmp(argv[i], "--end=", 6) == 0)
+			end = atoi(argv[i] + 6);
+		else
+			fname = argv[i];
+	}
+
+	if (fname == NULL) {
+		fprintf(stderr, "usage: disasm <fname> [--start=<start>] [--end=<end>]\n");
+		exit(1);
+	}
 
 	f = fopen(fname, "rb");
-
-	if (argc > 2) {
-		bytes = atoi(argv[2]);
-	} else {
-		bytes = 1;
-		i = 0;
-		while ((i < 0x10000) & !feof(f)) {
-			read_word(&word);
-			if (word)
-				bytes = i + 2;
-		}
-		rewind(f);
-	}
-
-	i = 0;
-	while ((i < bytes) && !feof(f)) {
-		printf("0x%.4X: ", i);
-		read_word(&word);
-		if (word & 0x1F) {
-			decode_rval((word >> 10) & 0x3F);
-			decode_lval((word >> 5) & 0x1F);
-			printf("%s %s, %s\n", opcode_table[word & 0x1F],
-						lval, rval);
-		} else if ((word >> 5) & 0x1F) {
-			decode_rval((word >> 10) & 0x3F);
-			printf("%s %s\n", spc_opcode_table[(word >> 5) & 0x1F],
-						rval);
-		} else {
-			printf("dat %x\n", word);
-		}
-	}
-
+	len = fread(memory, 2, 0x10000, f);
 	fclose(f);
+
+	last = 0;
+	for (i = 0; i < len; i++) {
+		if (memory[i])
+			last = i;
+	}
+
+	if ((last + 1) < end)
+		end = last + 1;
+
+	for (i = start; i <= end; i += inst_len) {
+		inst_len = decode_inst(&memory[i], buf);
+		printf("0x%.4X: %s\n", i, buf);
+	}
+
 	return 0;
 }
+#endif
