@@ -46,6 +46,7 @@ const char *gpr_table[0x08] = {
 op (set)|(add)|(sub)|(mul)|(mli)|(div)|(dvi)|(mod)|(mdi)|(and)|(bor)|(xor)|(shr)|(asr)|(shl)|(ifb)|(ifc)|(ife)|(ifn)|(ifg)|(ifa)|(ifl)|(ifu)|(adx)|(sbx)|(sti)|(std)
 spc_op (jsr)|(int)|(iag)|(ias)|(rfi)|(iaq)|(hwn)|(hwq)|(hwi)
 dat (dat)
+res (res)
 gpr (a)|(b)|(c)|(x)|(y)|(z)|(i)|(j)
 pc (pc)
 sp (sp)
@@ -86,6 +87,11 @@ str \".*\"
 {dat} {
 	printf("dat\n");
 	return DAT;
+}
+
+{res} {
+	printf("res\n");
+	return RES;
 }
 
 {gpr} {
@@ -168,7 +174,8 @@ str \".*\"
 {str} {
 	printf("string constant: %s\n", yytext);
 #ifndef SCANNER_ONLY
-	strncpy(str, yytext, 1024);
+	strncpy(str, yytext + 1, 1024);
+	str[strlen(str) - 1] = 0;
 #endif
 	return STR;
 }

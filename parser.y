@@ -32,6 +32,7 @@ char *sptr;
 %token OP
 %token SPC_OP
 %token DAT
+%token RES
 %token LABEL
 %token STR
 %token INT
@@ -50,6 +51,7 @@ char *sptr;
 list:	/* Empty. */
 	| list inst { memory[addr++] = (uint16_t)$2; addr += num_literals; num_literals = 0; }
 	| list data
+	| list res
 	| list anchor
 	;
 
@@ -61,6 +63,9 @@ data:	DAT lit { memory[addr++] = (uint16_t)$2; }
 	| DAT STR { sptr = &str[0]; while(*sptr) memory[addr++] = (uint16_t)*sptr++; }
 	| data ',' lit { memory[addr++] = (uint16_t)$3; }
 	| data ',' STR { sptr = &str[0]; while(*sptr) memory[addr++] = (uint16_t)*sptr++; }
+	;
+
+res:	RES lit { addr += $2; }
 	;
 
 anchor:	':' LABEL { queue_label(lbl); }
