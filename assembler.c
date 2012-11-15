@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
 		close(1);
 		dup(fds[1]);
 		close(fds[0]);
-		execlp("./lower", "lower", NULL);
+		execlp("tr", "tr", "A-Z", "a-z", NULL);
 		perror("parent: execlp");
 	} else {
 		close(0);

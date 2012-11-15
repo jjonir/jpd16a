@@ -9,7 +9,7 @@ YFLAGS = -d -t
 
 all: jpd16a scanner parser memdump disasm
 
-jpd16a: parser lower
+jpd16a: parser lower assembler.c
 	$(CC) -o $@ assembler.c
 
 lower: lower.c
