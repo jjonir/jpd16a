@@ -172,6 +172,13 @@ int main(int argc, char *argv[])
 	for (i = 1; i < argc; i++) {
 		if ((strcmp(argv[i], "--debug") == 0) || (strcmp(argv[i], "-d") == 0))
 			yydebug = 1;
+		else if (strcmp(argv[i], "-o") == 0)
+			if ((i + 1) < argc) {
+				outfilename = argv[++i];
+			} else {
+				fprintf(stderr, "-o requires an argument\n");
+				exit(1);
+			}
 		else
 			outfilename = argv[i];
 	}
