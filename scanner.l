@@ -36,6 +36,8 @@ const char *gpr_table[0x08] = {
 	"a", "b", "c", "x", "y", "z", "i", "j"
 };
 
+static void lower(char *s);
+
 #ifndef SCANNER_ONLY
 	#define printf(...)
 #else
@@ -65,6 +67,7 @@ str \".*\"
 %%
 
 {op} {
+	lower(yytext);
 	printf("op: %s\n", yytext);
 #ifndef SCANNER_ONLY
 	for (opcode = 0; opcode < 0x20; opcode++)
@@ -75,6 +78,7 @@ str \".*\"
 }
 
 {spc_op} {
+	lower(yytext);
 	printf("special op: %s\n", yytext);
 #ifndef SCANNER_ONLY
 	for (opcode = 0; opcode < 0x20; opcode++)
@@ -95,6 +99,7 @@ str \".*\"
 }
 
 {gpr} {
+	lower(yytext);
 	printf("gpr: %s\n", yytext);
 #ifndef SCANNER_ONLY
 	for (gpr_no = 0; gpr_no < 0x20; gpr_no++)
@@ -181,6 +186,7 @@ str \".*\"
 }
 
 {label} {
+    lower(yytext);
 	printf("label %s\n", yytext);
 #ifndef SCANNER_ONLY
 	strncpy(lbl, yytext, 1024);
@@ -197,6 +203,15 @@ str \".*\"
 ;.*\n    /* Eat comments */
 
 %%
+
+void lower(char *s)
+{
+	while (*s) {
+		if ((*s >= 'A') && (*s <= 'Z'))
+			*s -= ('A' - 'a');
+		s++;
+	}
+}
 
 #ifdef SCANNER_ONLY
 int main(int argc, char *argv[])

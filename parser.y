@@ -167,7 +167,9 @@ int main(int argc, char *argv[])
 	int i;
 	const char defaultoutfilename[] = "out.bin";
 	const char *outfilename = defaultoutfilename;
+	const char *infilename = NULL;
 	FILE *f;
+	extern FILE *yyin;
 
 	for (i = 1; i < argc; i++) {
 		if ((strcmp(argv[i], "--debug") == 0) || (strcmp(argv[i], "-d") == 0))
@@ -180,8 +182,13 @@ int main(int argc, char *argv[])
 				exit(1);
 			}
 		else
-			outfilename = argv[i];
+			infilename = argv[i];
 	}
+
+	if (infilename != NULL)
+		yyin = fopen(infilename, "r");
+	else
+		yyin = stdin;
 
 	memset(memory, 0, sizeof(memory));
 	addr = 0;
